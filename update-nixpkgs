@@ -23,19 +23,19 @@ BRANCH="update/sigi-$VERSION"
 git branch -D "$BRANCH" || true
 git checkout -b "$BRANCH"
 
-PKG=./pkgs/applications/misc/sigi/default.nix
+PKG=./pkgs/by-name/si/sigi/package.nix
 
 OLDVERSION="$(grep -E 'version' "$PKG" | head -n 1 | sed 's/";//' | sed -E 's/.+"//')"
 
 sed -i -E "s/version = \".+/version = \"$VERSION\";/" "$PKG"
 
-SHASUM="$(not nix-env -iA sigi -f . 2>&1 | tee | grep got | sed -E 's/.+sha/sha/')"
+SHASUM="$(not nix-env -iA sigi -f . 2>&1 | tee | grep got: | sed -E 's/.+sha/sha/')"
 
-sed -i -E "s/sha256 = .+/sha256 = \"${SHASUM//\//\\\/}\";/" "$PKG"
+sed -i -E "s/hash = .+/hash = \"${SHASUM//\//\\\/}\";/" "$PKG"
 
-CARGO_SHASUM="$(not nix-env -iA sigi -f . 2>&1 | tee | grep got | sed -E 's/.+sha/sha/')"
+CARGO_SHASUM="$(not nix-env -iA sigi -f . 2>&1 | tee | grep got: | sed -E 's/.+sha/sha/')"
 
-sed -i -E "s/cargoSha256 = .+/cargoSha256 = \"${CARGO_SHASUM//\//\\\/}\";/" "$PKG"
+sed -i -E "s/cargoHash = .+/cargoHash = \"${CARGO_SHASUM//\//\\\/}\";/" "$PKG"
 
 nix-env -iA sigi -f .
 
@@ -54,4 +54,3 @@ gh pr create \
 
 git checkout master
 git branch -D "update/sigi-$VERSION" || true
-
