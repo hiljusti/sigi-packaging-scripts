@@ -1,0 +1,48 @@
+#!/bin/bash
+
+set -eux
+
+script="$(basename "$0")"
+newver="$1"
+patchfile="sigi-to-$newver.patch"
+
+# HOST forking! If we're not in the arch box:
+# 1. Copy this script there
+# 2. Execute it
+if [[ $(hostname) != archbox ]]; then
+    scp "$0" archbox:~/"$script"
+    ssh -qt archbox "bash '$script' '$newver'"
+
+    exit 0
+fi
+
+# We're in.
+
+cd /workplace/hiljusti/sigi/
+
+rm sigi-*tar* || true
+git add -A . && git stash || true
+git checkout master
+git pull --rebase
+
+sed -i -E "s/^pkgver.+/pkgver=\"${newver}\"/" PKGBUILD
+
+SHASUM="$(
+    2>&1 ./build.sh clean install check \
+        | tail -n 2 \
+        | head -n 1 \
+        | cut -d' ' -f1
+)"
+
+echo $SHASUM
+
+sed -i -E "s/^sha256sums.+/sha256sums=('${SHASUM}')/" PKGBUILD
+
+./build.sh clean install check \
+  && git add . \
+  && git commit -m "update to $newver" \
+  && git push \
+  && git checkout packaging/arch-aur \
+  && git merge master \
+  && git push mirror \
+  && git checkout master
